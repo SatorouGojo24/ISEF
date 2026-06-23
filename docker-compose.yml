@@ -1,0 +1,38 @@
+services:
+  # Base de datos: Persistencia profesional con PostgreSQL
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: todolist_db
+    ports:
+      - "5433:5432"
+
+  # Backend: Tu API en Node.js
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+      - "5555:5555"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://admin:secretpassword@db:5432/todolist_db
+    volumes:
+      - ./backend/src:/app/src
+      # Esta línea es VITAL. Evita que tu node_modules local sobreescriba el del contenedor.
+      - /app/node_modules
+
+  # Frontend: Tu interfaz React + Tailwind
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      # La misma lógica aplica aquí para asegurar consistencia.
+      - /app/node_modules
+    stdin_open: true
+    tty: true
