@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react';
+import { PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { PayPalButton } from './components/PayPalButton';
 import Login from './components/Login';
+import { ChatBot } from './components/ChatBot';
+import { TiendaISEF } from './components/TiendaISEF';
+import { PerfilFiscal } from './components/PerfilFiscal';
 
 interface Task { id: string; titulo: string; descripcion: string; estado: boolean; }
+interface ToastData { message: string; type: 'success' | 'error'; }
 
-// Componente de notificación flotante (Toast)
-const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
+const Toast = ({ data, onClose }: { data: ToastData, onClose: () => void }) => {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
   return (
-    <div className="fixed top-5 right-5 z-50 bg-slate-900 border border-cyan-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-fade-in-up">
-      <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
-      <p className="font-bold text-sm">{message}</p>
+    <div className={`fixed top-5 right-5 z-50 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-fade-in-up ${data.type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-900 border border-cyan-500 text-white'}`}>
+      <div className={`w-2 h-2 rounded-full animate-pulse ${data.type === 'error' ? 'bg-white' : 'bg-cyan-500'}`} />
+      <p className="font-bold text-sm">{data.message}</p>
     </div>
   );
 };
@@ -22,59 +27,47 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   
-  // 1. Estado de filtro con persistencia en localStorage
-  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>(
-    (localStorage.getItem('taskFilter') as 'all' | 'pending' | 'completed') || 'all'
-  );
-
+  // NAVEGACIÓN Y VISTAS AJUSTADA
+  const [vistaActual, setVistaActual] = useState<'planner' | 'tienda' | 'perfil'>('planner');
+  
+  // Estados de interfaz y CRUD
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ titulo: '', descripcion: '' });
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>((localStorage.getItem('taskFilter') as any) || 'all');
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
 
-  useEffect(() => {
-    localStorage.setItem('taskFilter', filter);
-  }, [filter]);
-
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
+  useEffect(() => { localStorage.setItem('taskFilter', filter); }, [filter]);
+  
   useEffect(() => {
     if (token) {
+      setLoading(true);
       fetch('http://localhost:3000/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => res.json())
-        .then(data => { setTasks(data); setLoading(false); })
-        .catch(() => { setToken(null); setLoading(false); });
+        .then(res => {
+          if (res.status === 403) throw new Error("Sesión expirada");
+          return res.json();
+        })
+        .then(data => { setTasks(Array.isArray(data) ? data : []); setLoading(false); })
+        .catch(() => { localStorage.removeItem('token'); setToken(null); setLoading(false); });
     }
   }, [token]);
 
   if (!token) return <Login onLogin={setToken} />;
 
   const addTask = async () => {
-    setError(null);
-    if (!titulo.trim() || !descripcion.trim()) {
-      setError("El título y la descripción son obligatorios");
-      return;
-    }
+    if (!titulo.trim() || !descripcion.trim()) return setToast({ message: "Título y detalle obligatorios", type: 'error' });
     const res = await fetch('http://localhost:3000/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ titulo, descripcion }),
     });
-    if (res.ok) {
-      const newTask = await res.json();
-      setTasks([newTask, ...tasks]);
-      setTitulo(''); setDescripcion('');
-      setToast("Tarea guardada con éxito");
-    } else {
-      setError("Error al crear la tarea");
+    if (res.ok) { 
+      const newTask = await res.json(); 
+      setTasks([newTask, ...tasks]); setTitulo(''); setDescripcion(''); 
+      setToast({ message: "Tarea guardada", type: 'success' }); 
     }
   };
 
@@ -84,132 +77,132 @@ function App() {
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    await fetch(`http://localhost:3000/api/tasks/${deleteTarget}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    setTasks(prev => prev.filter(t => t.id !== deleteTarget));
-    setDeleteTarget(null);
-    setToast("Tarea eliminada correctamente");
+    if (!taskToDelete) return;
+    await fetch(`http://localhost:3000/api/tasks/${taskToDelete.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    setTasks(prev => prev.filter(t => t.id !== taskToDelete.id));
+    setTaskToDelete(null);
+    setToast({ message: "Tarea eliminada", type: 'success' });
   };
 
-  const saveEdit = async (id: string, nuevoTitulo: string, nuevaDescripcion: string) => {
-    if (!nuevoTitulo.trim()) return;
-    const task = tasks.find(t => t.id === id);
-    if (!task) return;
+  const startEdit = (task: Task) => {
+    setEditingId(task.id);
+    setEditForm({ titulo: task.titulo, descripcion: task.descripcion });
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editForm.titulo.trim() || !editForm.descripcion.trim()) return setToast({ message: "Campos vacíos", type: 'error' });
     await fetch(`http://localhost:3000/api/tasks/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ titulo: nuevoTitulo, descripcion: nuevaDescripcion })
+      body: JSON.stringify({ titulo: editForm.titulo, descripcion: editForm.descripcion })
     });
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, titulo: nuevoTitulo, descripcion: nuevaDescripcion } : t));
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, titulo: editForm.titulo, descripcion: editForm.descripcion } : t));
     setEditingId(null);
-    setToast("Tarea editada con éxito");
+    setToast({ message: "Actualizada", type: 'success' });
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-  };
+  const logout = () => { localStorage.removeItem('token'); setToken(null); };
 
-  const filteredTasks = tasks.filter(t => {
-    if (filter === 'pending') return !t.estado;
-    if (filter === 'completed') return t.estado;
-    return true;
-  });
+  const filteredTasks = Array.isArray(tasks) ? tasks.filter(t => { 
+    if (filter === 'pending') return !t.estado; 
+    if (filter === 'completed') return t.estado; 
+    return true; 
+  }) : [];
 
   return (
-    <div className="min-h-screen bg-[#05050a] p-12 text-slate-200">
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
-      
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-[#0b0b14] p-8 rounded-3xl border border-red-600/50 shadow-2xl w-80 text-center">
-                <h3 className="text-white font-bold mb-4">¿Estás seguro?</h3>
-                <p className="text-slate-400 text-sm mb-6">Esta acción no se puede deshacer.</p>
-                <div className="flex gap-3 justify-center">
-                    <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-slate-400 text-xs font-bold uppercase">Cancelar</button>
-                    <button onClick={confirmDelete} className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-bold uppercase hover:bg-red-700 transition-colors">Confirmar</button>
-                </div>
-            </div>
-        </div>
-      )}
-      
-      <main className="mx-auto max-w-2xl">
-        <div className="flex justify-between items-center mb-10">
-            <h1 className="text-4xl font-black text-red-600 mb-10 tracking-wider">ISEF PLANNER</h1>
-            <button onClick={logout} className="text-xs text-slate-500 hover:text-red-500 uppercase font-bold">Cerrar Sesión</button>
-        </div>
+    <PayPalScriptProvider options={{ "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID || "test", currency: "MXN" }}>
+      <div className="min-h-screen bg-[#05050a] text-slate-200 relative pb-12">
+        {toast && <Toast data={toast} onClose={() => setToast(null)} />}
         
-        {error && <div className="bg-red-600 text-white p-4 rounded-xl mb-6 text-sm font-bold border border-red-400">{error}</div>}
-        
-        <div className="space-y-4 rounded-3xl border border-violet-500/20 bg-[#0b0b14] p-8 mb-12">
-          <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título..." className="w-full bg-transparent outline-none text-white font-bold" />
-          {/* 3. Atajo de teclado Enter */}
-          <input value={descripcion} onChange={e => setDescripcion(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} placeholder="Detalle..." className="w-full bg-transparent outline-none text-sm text-slate-400" />
-          <button onClick={addTask} className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-white font-bold">CREAR TAREA</button>
-        </div>
-
-        {/* 1. Filtros de estado */}
-        <div className="flex gap-4 mb-6">
-         {[
-          { id: 'all', label: 'Todas' },
-          { id: 'pending', label: 'Pendientes' },
-          { id: 'completed', label: 'Completadas' }
-         ].map(f => (
-           <button 
-             key={f.id} 
-             onClick={() => setFilter(f.id as any)} 
-             className={`text-xs font-bold uppercase ${filter === f.id ? 'text-white border-b border-white' : 'text-slate-600'}`}
-           >
-             {f.label}
-           </button>
-         ))}
-        </div>
-
-        {/* 2. Loading Skeleton */}
-        {loading ? (
-            <div className="space-y-4 animate-pulse">
-                <div className="h-20 bg-slate-800 rounded-2xl"></div>
-                <div className="h-20 bg-slate-800 rounded-2xl"></div>
+        {/* NAVEGACIÓN SUPERIOR FIJA */}
+        <nav className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-8 py-4 flex justify-between items-center shadow-lg">
+          <div className="flex items-center gap-10">
+            <h1 className="text-2xl font-black text-red-600 tracking-wider">ISEF<span className="text-white"></span></h1>
+            <div className="flex gap-6">
+              <button onClick={() => setVistaActual('planner')} className={`font-bold text-sm tracking-wide uppercase transition-colors ${vistaActual === 'planner' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-1' : 'text-slate-500 hover:text-slate-300'}`}>Mi Planner</button>
+              <button onClick={() => setVistaActual('tienda')} className={`font-bold text-sm tracking-wide uppercase transition-colors ${vistaActual === 'tienda' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-1' : 'text-slate-500 hover:text-slate-300'}`}>Catálogo ISEF</button>
+              <button onClick={() => setVistaActual('perfil')} className={`font-bold text-sm tracking-wide uppercase transition-colors ${vistaActual === 'perfil' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-1' : 'text-slate-500 hover:text-slate-300'}`}>Perfil Fiscal</button>
             </div>
-        ) : (
-          <ul className="space-y-4">
-            {filteredTasks.map(task => (
-              <li key={task.id} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-[#0b0b14] p-6">
-                <div className="flex-1">
-                  {editingId === task.id ? (
-                    <div className="flex flex-col gap-2">
-                      <input autoFocus className="bg-transparent border-b border-cyan-500 outline-none text-white font-bold w-full" defaultValue={task.titulo} id={`edit-titulo-${task.id}`} />
-                      <input className="bg-transparent border-b border-slate-500 outline-none text-xs text-slate-400 w-full" defaultValue={task.descripcion} id={`edit-desc-${task.id}`} />
-                      <div className="flex gap-2">
-                        <button onClick={() => saveEdit(task.id, 
-                            (document.getElementById(`edit-titulo-${task.id}`) as HTMLInputElement).value,
-                            (document.getElementById(`edit-desc-${task.id}`) as HTMLInputElement).value
-                        )} className="text-green-400 text-xs font-bold uppercase">Guardar</button>
-                        <button onClick={() => setEditingId(null)} className="text-slate-500 text-xs font-bold uppercase">Cancelar</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <h3 className={`font-bold ${task.estado ? 'line-through text-slate-600' : 'text-white'}`}>{task.titulo}</h3>
-                      <p className="text-sm text-slate-500">{task.descripcion}</p>
-                    </div>
-                  )}
-                </div>
-                {editingId !== task.id && (
-                  <div className="flex gap-4 ml-4">
-                    <button onClick={() => setEditingId(task.id)} className="text-violet-400 text-xs font-bold uppercase">Editar</button>
-                    <button onClick={() => toggleTask(task.id)} className={`text-xs font-bold uppercase ${task.estado ? 'text-slate-600' : 'text-cyan-400'}`}>
-                      {task.estado ? 'Completada' : 'Pendiente'}
-                    </button>
-                    <button onClick={() => setDeleteTarget(task.id)} className="text-red-500 text-xs font-bold uppercase">Borrar</button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+          </div>
+          <button onClick={logout} className="text-xs text-slate-500 hover:text-red-500 uppercase font-bold">Cerrar Sesión</button>
+        </nav>
+
+        {/* Modal de Eliminación */}
+        {taskToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md rounded-3xl border border-red-500/30 bg-[#0b0b14] p-8 text-center shadow-2xl animate-fade-in-up">
+              <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 font-black text-xl mb-4">!</div>
+              <h3 className="text-xl font-black text-white mb-2">¿Confirmar eliminación?</h3>
+              <p className="text-sm text-slate-400 mb-6">Estás a punto de eliminar "{taskToDelete.titulo}".</p>
+              <div className="flex gap-4 justify-center">
+                <button onClick={() => setTaskToDelete(null)} className="px-5 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-400 hover:text-white uppercase">Cancelar</button>
+                <button onClick={confirmDelete} className="px-5 py-3 rounded-2xl bg-red-600 text-xs font-bold text-white hover:bg-red-700 uppercase shadow-lg shadow-red-600/20">Eliminar Tarea</button>
+              </div>
+            </div>
+          </div>
         )}
-      </main>
-    </div>
+
+        {/* CONTENIDO PRINCIPAL */}
+        <div className="pt-10">
+          {vistaActual === 'planner' ? (
+            <main className="mx-auto max-w-2xl px-6">
+              <div className="mb-10">
+                <h2 className="text-3xl font-black text-white mb-2">Panel de Tareas</h2>
+                <PayPalButton />
+              </div>
+              <div className="space-y-4 rounded-3xl border border-violet-500/20 bg-[#0b0b14] p-8 mb-8 shadow-xl">
+                <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título de la tarea..." className="w-full bg-transparent outline-none text-white font-bold text-lg" />
+                <input value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Detalles o descripción..." className="w-full bg-transparent outline-none text-sm text-slate-400" />
+                <button onClick={addTask} className="w-full mt-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-white font-bold hover:opacity-90">CREAR TAREA</button>
+              </div>
+              <div className="flex gap-4 mb-6">
+                <button onClick={() => setFilter('all')} className={`text-sm font-bold uppercase ${filter === 'all' ? 'text-violet-400' : 'text-slate-600'}`}>Todas</button>
+                <button onClick={() => setFilter('pending')} className={`text-sm font-bold uppercase ${filter === 'pending' ? 'text-violet-400' : 'text-slate-600'}`}>Pendientes</button>
+                <button onClick={() => setFilter('completed')} className={`text-sm font-bold uppercase ${filter === 'completed' ? 'text-violet-400' : 'text-slate-600'}`}>Completadas</button>
+              </div>
+              {loading ? ( <div className="animate-pulse space-y-4"><div className="h-20 bg-slate-800 rounded-2xl"></div></div> ) : (
+                <ul className="space-y-4">
+                  {filteredTasks.map(task => (
+                    <li key={task.id} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-[#0b0b14] p-6 hover:border-slate-700">
+                      {editingId === task.id ? (
+                        <div className="flex-1 space-y-3 mr-4">
+                          <input value={editForm.titulo} onChange={e => setEditForm({...editForm, titulo: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white font-bold outline-none" />
+                          <input value={editForm.descripcion} onChange={e => setEditForm({...editForm, descripcion: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-slate-300 outline-none" />
+                          <div className="flex gap-3">
+                            <button onClick={() => saveEdit(task.id)} className="text-xs font-bold text-cyan-400">GUARDAR</button>
+                            <button onClick={() => setEditingId(null)} className="text-xs font-bold text-slate-500">CANCELAR</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex-1">
+                          <h3 className={`font-bold ${task.estado ? 'line-through text-slate-600' : 'text-white'}`}>{task.titulo}</h3>
+                          <p className={`text-sm mt-1 ${task.estado ? 'text-slate-700' : 'text-slate-500'}`}>{task.descripcion}</p>
+                        </div>
+                      )}
+                      {editingId !== task.id && (
+                        <div className="flex flex-col gap-3 ml-4 items-end">
+                          <button onClick={() => toggleTask(task.id)} className={`text-xs font-bold uppercase ${task.estado ? 'text-slate-500' : 'text-cyan-500'}`}>{task.estado ? 'Marcar Pendiente' : 'Marcar Completada'}</button>
+                          <div className="flex gap-3">
+                            <button onClick={() => startEdit(task)} className="text-xs font-bold text-violet-500 uppercase">Editar</button>
+                            <button onClick={() => setTaskToDelete(task)} className="text-xs font-bold text-red-500 uppercase">Eliminar</button>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                  {filteredTasks.length === 0 && <div className="text-center text-slate-600 py-10 font-bold">No hay tareas.</div>}
+                </ul>
+              )}
+            </main>
+          ) : vistaActual === 'tienda' ? (
+            <TiendaISEF />
+          ) : (
+            <PerfilFiscal />
+          )}
+        </div>
+        <ChatBot token={token || ""} />
+      </div>
+    </PayPalScriptProvider>
   );
 }
 

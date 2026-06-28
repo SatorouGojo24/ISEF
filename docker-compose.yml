@@ -1,38 +1,51 @@
 services:
-  # Base de datos: Persistencia profesional con PostgreSQL
   db:
     image: postgres:15-alpine
     restart: always
+    container_name: todolist_db
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: secretpassword
       POSTGRES_DB: todolist_db
     ports:
       - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d todolist_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # Backend: Tu API en Node.js
   backend:
     build: ./backend
+    container_name: backend_app
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     ports:
       - "3000:3000"
       - "5555:5555"
     depends_on:
-      - db
-    environment:
-      - DATABASE_URL=postgresql://admin:secretpassword@db:5432/todolist_db
+      db:
+        condition: service_healthy 
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend/src:/app/src
-      # Esta línea es VITAL. Evita que tu node_modules local sobreescriba el del contenedor.
       - /app/node_modules
+    command: sh -c "npx prisma db push && npx prisma studio --hostname 0.0.0.0 --port 5555 & npm run dev"
 
-  # Frontend: Tu interfaz React + Tailwind
   frontend:
     build: ./frontend
+    container_name: frontend_app
     ports:
       - "5173:5173"
     volumes:
       - ./frontend/src:/app/src
-      # La misma lógica aplica aquí para asegurar consistencia.
       - /app/node_modules
     stdin_open: true
     tty: true
+
+volumes:
+  db_data:

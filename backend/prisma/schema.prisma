@@ -16,7 +16,29 @@ model Task {
 }
 
 model User {
-  id       String   @id @default(uuid())
-  email    String   @unique
-  password String
+  id           String        @id @default(uuid())
+  email        String        @unique
+  password     String
+  perfilFiscal PerfilFiscal?
+  facturas     Factura[]     // <-- Relación inversa agregada
+}
+
+model PerfilFiscal {
+  id            String @id @default(uuid())
+  rfc           String
+  razonSocial   String
+  regimenFiscal String
+  codigoPostal  String
+  userId        String @unique
+  user          User   @relation(fields: [userId], references: [id])
+}
+
+model Factura {
+  id        String   @id // El ID que regresa Facturama
+  uuid      String   @unique // El Folio Fiscal del SAT (UUID)
+  folio     String?
+  total     Float
+  fecha     DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 }

@@ -1,18 +1,14 @@
 import { Router } from 'express';
 import { getTasks, createTask, toggleTask, editTask, deleteTask } from '../controllers/task.controller.js';
-import { register, login } from '../controllers/auth.controller.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
-const router = Router({ strict: false });
+const router = Router();
 
-// Rutas de tareas
-router.get('/tasks', getTasks);
-router.post('/tasks', createTask);
-router.patch('/tasks/:id', toggleTask);
-router.put('/tasks/:id', editTask);
-router.delete('/tasks/:id', deleteTask);
-
-// Rutas de Auth
-router.post('/auth/register', register);
-router.post('/auth/login', login);
+// Rutas protegidas
+router.get('/tasks', authenticateToken, getTasks);
+router.post('/tasks', authenticateToken, createTask);
+router.patch('/tasks/:id', authenticateToken, toggleTask);
+router.put('/tasks/:id', authenticateToken, editTask);
+router.delete('/tasks/:id', authenticateToken, deleteTask);
 
 export default router;
