@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 
 export const PerfilFiscal = () => {
+  // Declaramos la URL base usando la variable de entorno
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
   // Estado para el formulario
   const [datos, setDatos] = useState({ rfc: '', razonSocial: '', regimenFiscal: '', codigoPostal: '' });
   const [mensaje, setMensaje] = useState<{ texto: string, tipo: 'exito' | 'error' } | null>(null);
@@ -13,7 +16,7 @@ export const PerfilFiscal = () => {
       const token = localStorage.getItem('token');
       // Cargar Perfil
       try {
-        const res = await fetch('http://localhost:3000/api/perfil', {
+        const res = await fetch(`${apiUrl}/api/perfil`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -26,7 +29,7 @@ export const PerfilFiscal = () => {
 
       // Cargar Facturas
       try {
-        const resFact = await fetch('http://localhost:3000/api/facturas/mis-compras', {
+        const resFact = await fetch(`${apiUrl}/api/facturas/mis-compras`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (resFact.ok) {
@@ -36,11 +39,11 @@ export const PerfilFiscal = () => {
       } catch (error) { console.error("Error al cargar facturas", error); }
     };
     cargarDatos();
-  }, []);
+  }, [apiUrl]);
 
   const guardarPerfil = async () => {
     const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:3000/api/perfil', {
+    const res = await fetch(`${apiUrl}/api/perfil`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(datos)
@@ -56,7 +59,7 @@ export const PerfilFiscal = () => {
 
   const descargarPDF = async (id: string) => {
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:3000/api/facturas/${id}/pdf`, {
+    const res = await fetch(`${apiUrl}/api/facturas/${id}/pdf`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const blob = await res.blob();
@@ -69,7 +72,7 @@ export const PerfilFiscal = () => {
 
   const descargarXML = async (id: string) => {
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:3000/api/facturas/${id}/xml`, {
+    const res = await fetch(`${apiUrl}/api/facturas/${id}/xml`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const blob = await res.blob();
