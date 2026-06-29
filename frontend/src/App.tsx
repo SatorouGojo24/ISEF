@@ -117,17 +117,24 @@ function App() {
       <div className="min-h-screen bg-[#05050a] text-slate-200 relative pb-12">
         {toast && <Toast data={toast} onClose={() => setToast(null)} />}
         
-        {/* NAVEGACIÓN SUPERIOR FIJA */}
-        <nav className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-8 py-4 flex justify-between items-center shadow-lg">
-          <div className="flex items-center gap-10">
+        {/* NAVEGACIÓN SUPERIOR AJUSTADA PARA MÓVILES */}
+        <nav className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row justify-between items-center shadow-lg gap-3 md:gap-0">
+          
+          {/* Fila 1 (Móvil): Logo y Cerrar Sesión */}
+          <div className="flex items-center justify-between w-full md:w-auto">
             <h1 className="text-2xl font-black text-red-600 tracking-wider">ISEF<span className="text-white"></span></h1>
-            <div className="flex gap-6">
-              <button onClick={() => setVistaActual('planner')} className={`font-bold text-sm tracking-wide uppercase transition-colors ${vistaActual === 'planner' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-1' : 'text-slate-500 hover:text-slate-300'}`}>Mi Planner</button>
-              <button onClick={() => setVistaActual('tienda')} className={`font-bold text-sm tracking-wide uppercase transition-colors ${vistaActual === 'tienda' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-1' : 'text-slate-500 hover:text-slate-300'}`}>Catálogo ISEF</button>
-              <button onClick={() => setVistaActual('perfil')} className={`font-bold text-sm tracking-wide uppercase transition-colors ${vistaActual === 'perfil' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-1' : 'text-slate-500 hover:text-slate-300'}`}>Perfil Fiscal</button>
-            </div>
+            <button onClick={logout} className="md:hidden text-[10px] text-slate-400 hover:text-red-500 uppercase font-bold border border-slate-700 px-2 py-1 rounded-md">Cerrar Sesión</button>
           </div>
-          <button onClick={logout} className="text-xs text-slate-500 hover:text-red-500 uppercase font-bold">Cerrar Sesión</button>
+          
+          {/* Fila 2 (Móvil): Botones del Menú */}
+          <div className="flex gap-2 md:gap-6 w-full md:w-auto justify-between md:justify-center overflow-x-auto pb-1 md:pb-0" style={{ scrollbarWidth: 'none' }}>
+            <button onClick={() => setVistaActual('planner')} className={`font-bold text-[11px] md:text-sm tracking-wide uppercase whitespace-nowrap transition-colors ${vistaActual === 'planner' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-1' : 'text-slate-500 hover:text-slate-300'}`}>Mi Planner</button>
+            <button onClick={() => setVistaActual('tienda')} className={`font-bold text-[11px] md:text-sm tracking-wide uppercase whitespace-nowrap transition-colors ${vistaActual === 'tienda' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-1' : 'text-slate-500 hover:text-slate-300'}`}>Catálogo ISEF</button>
+            <button onClick={() => setVistaActual('perfil')} className={`font-bold text-[11px] md:text-sm tracking-wide uppercase whitespace-nowrap transition-colors ${vistaActual === 'perfil' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-1' : 'text-slate-500 hover:text-slate-300'}`}>Perfil Fiscal</button>
+          </div>
+          
+          {/* Cerrar sesión escritorio */}
+          <button onClick={logout} className="hidden md:block text-xs text-slate-500 hover:text-red-500 uppercase font-bold">Cerrar Sesión</button>
         </nav>
 
         {/* Modal de Eliminación */}
@@ -146,29 +153,29 @@ function App() {
         )}
 
         {/* CONTENIDO PRINCIPAL */}
-        <div className="pt-10">
+        <div className="pt-6 md:pt-10">
           {vistaActual === 'planner' ? (
-            <main className="mx-auto max-w-2xl px-6">
-              <div className="mb-10">
+            <main className="mx-auto max-w-2xl px-4 md:px-6">
+              <div className="mb-10 text-center md:text-left">
                 <h2 className="text-3xl font-black text-white mb-2">Panel de Tareas</h2>
                 <PayPalButton />
               </div>
-              <div className="space-y-4 rounded-3xl border border-violet-500/20 bg-[#0b0b14] p-8 mb-8 shadow-xl">
+              <div className="space-y-4 rounded-3xl border border-violet-500/20 bg-[#0b0b14] p-6 md:p-8 mb-8 shadow-xl">
                 <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título de la tarea..." className="w-full bg-transparent outline-none text-white font-bold text-lg" />
                 <input value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Detalles o descripción..." className="w-full bg-transparent outline-none text-sm text-slate-400" />
                 <button onClick={addTask} className="w-full mt-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-white font-bold hover:opacity-90">CREAR TAREA</button>
               </div>
-              <div className="flex gap-4 mb-6">
-                <button onClick={() => setFilter('all')} className={`text-sm font-bold uppercase ${filter === 'all' ? 'text-violet-400' : 'text-slate-600'}`}>Todas</button>
-                <button onClick={() => setFilter('pending')} className={`text-sm font-bold uppercase ${filter === 'pending' ? 'text-violet-400' : 'text-slate-600'}`}>Pendientes</button>
-                <button onClick={() => setFilter('completed')} className={`text-sm font-bold uppercase ${filter === 'completed' ? 'text-violet-400' : 'text-slate-600'}`}>Completadas</button>
+              <div className="flex gap-2 md:gap-4 mb-6 justify-center md:justify-start">
+                <button onClick={() => setFilter('all')} className={`text-xs md:text-sm font-bold uppercase ${filter === 'all' ? 'text-violet-400' : 'text-slate-600'}`}>Todas</button>
+                <button onClick={() => setFilter('pending')} className={`text-xs md:text-sm font-bold uppercase ${filter === 'pending' ? 'text-violet-400' : 'text-slate-600'}`}>Pendientes</button>
+                <button onClick={() => setFilter('completed')} className={`text-xs md:text-sm font-bold uppercase ${filter === 'completed' ? 'text-violet-400' : 'text-slate-600'}`}>Completadas</button>
               </div>
               {loading ? ( <div className="animate-pulse space-y-4"><div className="h-20 bg-slate-800 rounded-2xl"></div></div> ) : (
                 <ul className="space-y-4">
                   {filteredTasks.map(task => (
-                    <li key={task.id} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-[#0b0b14] p-6 hover:border-slate-700">
+                    <li key={task.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-[#0b0b14] p-5 md:p-6 hover:border-slate-700">
                       {editingId === task.id ? (
-                        <div className="flex-1 space-y-3 mr-4">
+                        <div className="flex-1 space-y-3 w-full md:mr-4">
                           <input value={editForm.titulo} onChange={e => setEditForm({...editForm, titulo: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white font-bold outline-none" />
                           <input value={editForm.descripcion} onChange={e => setEditForm({...editForm, descripcion: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-slate-300 outline-none" />
                           <div className="flex gap-3">
@@ -177,14 +184,14 @@ function App() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex-1">
+                        <div className="flex-1 w-full">
                           <h3 className={`font-bold ${task.estado ? 'line-through text-slate-600' : 'text-white'}`}>{task.titulo}</h3>
                           <p className={`text-sm mt-1 ${task.estado ? 'text-slate-700' : 'text-slate-500'}`}>{task.descripcion}</p>
                         </div>
                       )}
                       {editingId !== task.id && (
-                        <div className="flex flex-col gap-3 ml-4 items-end">
-                          <button onClick={() => toggleTask(task.id)} className={`text-xs font-bold uppercase ${task.estado ? 'text-slate-500' : 'text-cyan-500'}`}>{task.estado ? 'Marcar Pendiente' : 'Marcar Completada'}</button>
+                        <div className="flex md:flex-col gap-3 justify-between md:justify-end items-center md:items-end w-full md:w-auto border-t border-slate-800 md:border-none pt-4 md:pt-0 mt-2 md:mt-0">
+                          <button onClick={() => toggleTask(task.id)} className={`text-xs font-bold uppercase ${task.estado ? 'text-slate-500' : 'text-cyan-500'}`}>{task.estado ? 'Pendiente' : 'Completada'}</button>
                           <div className="flex gap-3">
                             <button onClick={() => startEdit(task)} className="text-xs font-bold text-violet-500 uppercase">Editar</button>
                             <button onClick={() => setTaskToDelete(task)} className="text-xs font-bold text-red-500 uppercase">Eliminar</button>
