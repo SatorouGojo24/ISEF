@@ -6,6 +6,9 @@ interface Message {
 }
 
 export const ChatBot = ({ token }: { token: string }) => {
+  // Lo declaramos al inicio del componente por consistencia
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -28,8 +31,6 @@ export const ChatBot = ({ token }: { token: string }) => {
     setIsLoading(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
       const res = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
         headers: {

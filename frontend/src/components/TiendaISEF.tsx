@@ -22,12 +22,15 @@ const productosISEF: Producto[] = [
 export const TiendaISEF = () => {
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
 
+  // Declaramos la URL base usando la variable de entorno de Vite
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
   // Lógica integrada para facturación automática
   const handleFacturacion = async (titulo: string, precio: number) => {
     const token = localStorage.getItem('token');
   
     try {
-      const res = await fetch('http://localhost:3000/api/facturas/generar', {
+      const res = await fetch(`${apiUrl}/api/facturas/generar`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

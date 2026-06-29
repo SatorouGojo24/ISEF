@@ -24,6 +24,9 @@ const Toast = ({ data, onClose }: { data: ToastData, onClose: () => void }) => {
 };
 
 function App() {
+  // Declaramos nuestra variable maestra aquí arriba
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -45,7 +48,7 @@ function App() {
   useEffect(() => {
     if (token) {
       setLoading(true);
-      fetch('http://localhost:3000/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } })
+      fetch(`${apiUrl}/api/tasks`, { headers: { 'Authorization': `Bearer ${token}` } })
         .then(res => {
           if (res.status === 403) throw new Error("Sesión expirada");
           return res.json();
@@ -53,13 +56,13 @@ function App() {
         .then(data => { setTasks(Array.isArray(data) ? data : []); setLoading(false); })
         .catch(() => { localStorage.removeItem('token'); setToken(null); setLoading(false); });
     }
-  }, [token]);
+  }, [token, apiUrl]);
 
   if (!token) return <Login onLogin={setToken} />;
 
   const addTask = async () => {
     if (!titulo.trim() || !descripcion.trim()) return setToast({ message: "Título y detalle obligatorios", type: 'error' });
-    const res = await fetch('http://localhost:3000/api/tasks', {
+    const res = await fetch(`${apiUrl}/api/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ titulo, descripcion }),
@@ -72,13 +75,13 @@ function App() {
   };
 
   const toggleTask = async (id: string) => {
-    await fetch(`http://localhost:3000/api/tasks/${id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } });
+    await fetch(`${apiUrl}/api/tasks/${id}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } });
     setTasks(prev => prev.map(t => t.id === id ? { ...t, estado: !t.estado } : t));
   };
 
   const confirmDelete = async () => {
     if (!taskToDelete) return;
-    await fetch(`http://localhost:3000/api/tasks/${taskToDelete.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    await fetch(`${apiUrl}/api/tasks/${taskToDelete.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     setTasks(prev => prev.filter(t => t.id !== taskToDelete.id));
     setTaskToDelete(null);
     setToast({ message: "Tarea eliminada", type: 'success' });
@@ -91,7 +94,7 @@ function App() {
 
   const saveEdit = async (id: string) => {
     if (!editForm.titulo.trim() || !editForm.descripcion.trim()) return setToast({ message: "Campos vacíos", type: 'error' });
-    await fetch(`http://localhost:3000/api/tasks/${id}`, {
+    await fetch(`${apiUrl}/api/tasks/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ titulo: editForm.titulo, descripcion: editForm.descripcion })

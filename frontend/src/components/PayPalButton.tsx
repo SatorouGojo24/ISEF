@@ -2,13 +2,13 @@ import { PayPalButtons } from "@paypal/react-paypal-js";
 
 export const PayPalButton = () => {
   const token = localStorage.getItem('token');
+  // Subimos la variable aquí para que todo el componente la pueda usar
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   return (
     <div className="w-full max-w-[250px] mx-auto mt-4">
       <PayPalButtons
         createOrder={async () => {
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
           const response = await fetch(`${apiUrl}/api/payment/create-order`, {
             method: "POST",
             headers: { 
