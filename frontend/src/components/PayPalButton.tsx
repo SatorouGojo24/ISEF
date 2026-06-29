@@ -7,8 +7,9 @@ export const PayPalButton = () => {
     <div className="w-full max-w-[250px] mx-auto mt-4">
       <PayPalButtons
         createOrder={async () => {
-          // AQUI ESTA EL CAMBIO: Especifica el puerto 3000
-          const response = await fetch("http://localhost:3000/api/payment/create-order", {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+          const response = await fetch(`${apiUrl}/api/payment/create-order`, {
             method: "POST",
             headers: { 
               "Content-Type": "application/json",

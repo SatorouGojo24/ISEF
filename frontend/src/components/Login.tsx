@@ -7,8 +7,9 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
   const [message, setMessage] = useState('');
 
   const handleSubmit = async () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     const endpoint = isRegister ? '/auth/register' : '/auth/login';
-    const res = await fetch(`http://localhost:3000/api${endpoint}`, {
+    const res = await fetch(`${apiUrl}/api${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
